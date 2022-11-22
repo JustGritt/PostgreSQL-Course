@@ -152,3 +152,42 @@ SELECT ADD_STOCK('Unknown ', 3); -- Unknown doesn't exist in the database
 SELECT ADD_STOCK('Futur ', 1);
 SELECT * FROM album_stock;
 
+-- ====================
+-- Question 6
+-- ====================
+CREATE OR REPLACE FUNCTION RENT_ALBUM(CUSTOMER_EMAIL VARCHAR(128), ALBUM VARCHAR(128), BORROW_DATE TIMESTAMP)
+    RETURNS BOOLEAN AS $$
+DECLARE
+    tmpId integer;
+    stockValue integer;
+BEGIN
+    SELECT temp.id into tmpId FROM
+    ( 
+        SELECT album.id, album.name AS aName
+        FROM album
+    ) temp 
+    WHERE temp.aName = ALBUM;
+    IF FOUND THEN
+        SELECT stock into stockValue FROM album_stock WHERE album_id = tmpId;
+        IF FOUND THEN
+            IF stockValue > 0 THEN
+                UPDATE album_stock SET stock = stockValue - 1 WHERE album_id = tmpId;
+                INSERT INTO album_rent (album_id, customer_id, borrow_date) VALUES (tmpId, (SELECT id FROM customer WHERE email = CUSTOMER_EMAIL), BORROW_DATE);
+                RETURN TRUE;
+            ELSE
+                RETURN FALSE;
+            END IF;
+        ELSE
+            RETURN FALSE;
+        END IF;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute the function
+INSERT INTO customer (email, firstname, lastname) VALUES ('Turtle@myges.fr', 'Smol', 'Turtle');
+SELECT RENT_ALBUM('Turtle@myges.fr', 'Dawn FM', '2022-01-10 00:00:00');
+
+

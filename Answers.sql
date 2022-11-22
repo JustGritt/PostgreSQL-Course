@@ -58,7 +58,7 @@ SELECT ADD_ALBUM('fuTuR '); -- Same name but different cases
 -- Question 3
 -- ====================
 CREATE OR REPLACE VIEW VIEW_ARTISTS AS
-SELECT artist.name, artist.birthdate, COUNT(song.id) AS songs
+SELECT artist.name AS artist, artist.birthdate, COUNT(song.id) AS songs
 FROM artist
 INNER JOIN song ON song.artist_id = artist.id
 GROUP BY artist.name, artist.birthdate
@@ -88,6 +88,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Execute the function
+-- Execute the function or insert a song directly in the database
 SELECT ADD_SONG('Less Than Zero', 199, 1); -- Artist ID 1 is The Weeknd
--- Or use: INSERT INTO song (name, duration, artist_id) VALUES ('Less Than Zero', 199, 1);
+INSERT INTO song (name, duration, artist_id) VALUES ('Starry Eyes', 137, 1);
+
+-- ====================
+-- Question 4
+-- ====================
+CREATE OR REPLACE VIEW VIEW_ALBUMS AS
+SELECT album.name AS album, COUNT(song.id) AS songs, SUM(song.duration) AS duration
+FROM album
+INNER JOIN album_song ON album_song.album_id = album.id
+INNER JOIN song ON song.id = album_song.song_id
+GROUP BY album.name
+ORDER BY album.name ASC;
+
+-- Add a song to an album. (eg. "Billie Jean" to "Thriller")
+INSERT INTO album_song (album_id, song_id, track) VALUES (1, 1, 1); -- Album: Dawn FM, Song: Less Than Zero, track 1
+INSERT INTO album_song (album_id, song_id, track) VALUES (1, 2, 2); -- Album: Dawn FM, Song: Starry Eyes, track 2
+SELECT * FROM VIEW_ALBUMS;

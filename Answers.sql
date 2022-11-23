@@ -160,6 +160,7 @@ CREATE OR REPLACE FUNCTION RENT_ALBUM(CUSTOMER_EMAIL VARCHAR(128), ALBUM VARCHAR
 DECLARE
     tmpId integer;
     stockValue integer;
+	customerId integer;
 BEGIN
     SELECT temp.id into tmpId FROM
     ( 
@@ -169,10 +170,11 @@ BEGIN
     WHERE temp.aName = ALBUM;
     IF FOUND THEN
         SELECT stock into stockValue FROM album_stock WHERE album_id = tmpId;
+		SELECT id INTO customerId FROM customer WHERE email = CUSTOMER_EMAIL;
         IF FOUND THEN
             IF stockValue > 0 THEN
                 UPDATE album_stock SET stock = stockValue - 1 WHERE album_id = tmpId;
-                INSERT INTO album_rent (album_id, customer_id, borrow_date) VALUES (tmpId, (SELECT id FROM customer WHERE email = CUSTOMER_EMAIL), BORROW_DATE);
+                INSERT INTO album_rent (album_id, customer_id, borrow_date) VALUES (tmpId, customerId, BORROW_DATE);
                 RETURN TRUE;
             ELSE
                 RETURN FALSE;
@@ -188,6 +190,55 @@ $$ LANGUAGE plpgsql;
 
 -- Execute the function
 INSERT INTO customer (email, firstname, lastname) VALUES ('Turtle@myges.fr', 'Smol', 'Turtle');
-SELECT RENT_ALBUM('Turtle@myges.fr', 'Dawn FM', '2022-01-10 00:00:00');
+INSERT INTO customer (email, firstname, lastname) VALUES ('billonr@myges.fr', 'billonr', 'myges');
+INSERT INTO customer (email, firstname, lastname) VALUES ('gaillad@myges.fr', 'gaillad', 'myges');
+SELECT RENT_ALBUM('Turtle@myges.fr', 'Dawn FM', '2022-01-10');
+SELECT RENT_ALBUM('billonr@myges.fr', 'L''Ecole des points vitaux ', '2019-01-05');
+SELECT RENT_ALBUM('gaillad@myges.fr', 'Futur ', '2019-01-05');
+SELECT RENT_ALBUM('billonr@myges.fr', 'Futur ', '2019-01-05');
+SELECT RENT_ALBUM('billonr@myges.fr', 'L''Ecole des points vitaux ', '2019-01-05');
+
+-- ====================
+-- Question 7 
+-- ====================
+CREATE OR REPLACE TRIGGER show_track_deliveries
+AFTER UPDATE ON album_stock
+FOR EACH ROW
+EXECUTE PROCEDURE log_stock();
+
+CREATE OR REPLACE FUNCTION log_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+	INSERT INTO track_deliveries (album_stock_id, amount, delivery_date) 
+	VALUES (NEW.album_id, NEW.stock, NOW());
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute the trigger
+SELECT ADD_STOCK('Billie Jean', 10);
+
+-- ====================
+-- Question 8
+-- ====================
+CREATE OR REPLACE FUNCTION DURATION_TO_STRING(DURATION INT)
+RETURNS VARCHAR(16) AS $$
+DECLARE
+	minutes INT;
+	seconds INT;
+BEGIN
+	IF DURATION < 0 THEN
+		RETURN '0:00';
+	END IF;
+
+	minutes = DURATION / 60;
+	seconds = DURATION % 60;
+	RETURN CONCAT(minutes, ':', seconds);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute the function
+SELECT DURATION_TO_STRING(120);
+
 
 
